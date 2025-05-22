@@ -1,5 +1,6 @@
 use chrono::{DateTime, Datelike, Local, Timelike};
 use cron::Schedule;
+use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -379,17 +380,18 @@ impl TimeWheel {
     }
 }
 
+static CRON: OnceCell<CronManager> = OnceCell::new();
 // 实现Cron任务管理器
 impl CronManager {
-    pub fn new() -> Self {
+    pub fn new() {
         let time_wheel = Arc::new(Mutex::new(TimeWheel::new()));
 
         let manager = CronManager { time_wheel };
 
         // 启动时间轮调度器
         manager.start_scheduler();
-
-        manager
+        CRON.set(manager)
+            .unwrap_or_else(|_| panic!("CronManager 已经初始化"));
     }
 
     // 添加任务

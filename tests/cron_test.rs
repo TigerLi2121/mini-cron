@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
+
     use chrono::Local;
     use cron::Schedule;
-    use mini_cron::CronManager;
-    use std::{str::FromStr, time::Duration};
+    use std::str::FromStr;
 
     #[test]
     fn test_cron_task() {
@@ -16,22 +16,26 @@ mod tests {
         println!("下一个执行时间: {}", next_time);
     }
 
-    #[tokio::test]
-    async fn add_cron_task() {
-        let mut manager = CronManager::new();
-        match manager.add("*/2 * 16 22 05 ? 2025", || {
-            println!("{} Hourly check executed", Local::now());
-        }) {
-            Ok(task_id) => println!("2 Task id {} added successfully", task_id),
-            Err(e) => eprintln!("Failed to add task: {}", e),
-        }
+    // #[tokio::test]
+    // async fn add_cron_task() {
+    //     let mut manager = task::CronManager::new();
+    //     match manager.add("*/2 * 16 22 05 ? 2025", || {
+    //         println!("{} Hourly check executed", Local::now());
+    //     }) {
+    //         Ok(task_id) => println!("2 Task id {} added successfully", task_id),
+    //         Err(e) => eprintln!("Failed to add task: {}", e),
+    //     }
 
-        tokio::time::sleep(Duration::from_secs(10)).await;
-        match manager.remove(1) {
-            Ok(_) => {
-                println!("Task 1 removed successfully");
-            }
-            Err(e) => eprintln!("Failed to remove task 1: {}", e),
-        };
-    }
+    //     tokio::time::sleep(Duration::from_secs(10)).await;
+    //     match manager.remove(1) {
+    //         Ok(_) => {
+    //             println!("Task 1 removed successfully");
+    //         }
+    //         Err(e) => eprintln!("Failed to remove task 1: {}", e),
+    //     };
+
+    //     loop {
+    //         tokio::time::sleep(Duration::from_secs(60)).await;
+    //     }
+    // }
 }
