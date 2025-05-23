@@ -5,7 +5,6 @@ use crate::common::req::Page;
 use crate::common::res::{R, RP};
 use crate::model::task::Task;
 use axum::extract::{Query, State};
-use axum::response::IntoResponse;
 use axum::{
     Router,
     extract::Json,
@@ -23,11 +22,7 @@ use std::sync::LazyLock;
 
 static TASKS: LazyLock<Mutex<HashMap<u64, Task>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
-async fn page(
-    _: State<AppState>,
-    Json(m): Json<Task>,
-    Json(page): Json<Page>,
-) -> impl IntoResponse {
+async fn page(_: State<AppState>, Json(m): Json<Task>, Json(page): Json<Page>) -> RP<Vec<Task>> {
     let tasks = TASKS.lock().await;
     let filtered_tasks: Vec<Task> = tasks
         .values()
@@ -43,9 +38,8 @@ async fn page(
     let end = (start + page.limit).min(total);
 
     let page_tasks = filtered_tasks[start..end].to_vec();
-    Json(RP::ok(total as u64, page_tasks))
+    RP::ok(total as u64, page_tasks)
 }
-
 async fn sou(State(mut state): State<AppState>, Json(m): Json<Task>) -> R<Value> {
     let mut task = m.clone();
     match state.task.add(m.cron.clone().as_str(), move || {
