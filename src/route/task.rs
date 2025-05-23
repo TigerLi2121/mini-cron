@@ -22,7 +22,11 @@ use std::sync::LazyLock;
 
 static TASKS: LazyLock<Mutex<HashMap<u64, Task>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
-async fn page(_: State<AppState>, Json(m): Json<Task>, Json(page): Json<Page>) -> RP<Vec<Task>> {
+async fn page(
+    State(_state): State<AppState>,
+    Json(m): Json<Task>,
+    Json(page): Json<Page>,
+) -> RP<Vec<Task>> {
     let tasks = TASKS.lock().await;
     let filtered_tasks: Vec<Task> = tasks
         .values()

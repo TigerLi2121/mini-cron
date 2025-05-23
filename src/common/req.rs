@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug, Default, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Page {
     pub page: usize,
 
