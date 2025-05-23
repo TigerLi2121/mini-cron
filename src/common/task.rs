@@ -1,15 +1,11 @@
 use chrono::{DateTime, Datelike, Local, Timelike};
 use cron::Schedule;
-use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::interval;
-
-// 任务唯一标识
-type TaskId = u64;
 
 // 任务执行函数
 type TaskFn = Arc<dyn Fn() + Send + Sync + 'static>;
@@ -28,7 +24,7 @@ enum TimeWheelLevel {
 // 时间轮桶，存储待执行的任务和对应的Cron表达式
 #[derive(Clone)]
 struct TimeWheelBucket {
-    tasks: HashMap<TaskId, (Arc<TaskFn>, String, TimeWheelLevel)>,
+    tasks: HashMap<u64, (Arc<TaskFn>, String, TimeWheelLevel)>,
 }
 
 // 多层级时间轮
@@ -38,10 +34,11 @@ struct TimeWheel {
     task_counter: AtomicU64,
     current_date: DateTime<Local>,
     // 添加任务索引，方便快速查找
-    task_index: HashMap<TaskId, (TimeWheelLevel, usize)>,
+    task_index: HashMap<u64, (TimeWheelLevel, usize)>,
 }
 
 // Cron任务管理器
+#[derive(Clone)]
 pub struct CronManager {
     time_wheel: Arc<Mutex<TimeWheel>>,
 }
@@ -147,12 +144,7 @@ impl TimeWheel {
     }
 
     // 添加Cron任务到时间轮
-    fn add_task(
-        &mut self,
-        mut task_id: u64,
-        cron_expr: &str,
-        task: TaskFn,
-    ) -> Result<TaskId, String> {
+    fn add_task(&mut self, mut task_id: u64, cron_expr: &str, task: TaskFn) -> Result<u64, String> {
         let schedule =
             Schedule::from_str(cron_expr).map_err(|e| format!("无效的Cron表达式: {}", e))?;
 
@@ -253,10 +245,7 @@ impl TimeWheel {
     }
 
     // 推进时间轮一个刻度
-    fn tick(
-        &mut self,
-        level: TimeWheelLevel,
-    ) -> Vec<(TaskId, Arc<TaskFn>, String, TimeWheelLevel)> {
+    fn tick(&mut self, level: TimeWheelLevel) -> Vec<(u64, Arc<TaskFn>, String, TimeWheelLevel)> {
         // 预分配合理大小的 Vec
         let mut tasks_to_execute = Vec::with_capacity(32);
 
@@ -323,7 +312,7 @@ impl TimeWheel {
     fn check_higher_level_tasks(
         &mut self,
         level: TimeWheelLevel,
-    ) -> Vec<(TaskId, Arc<TaskFn>, String, TimeWheelLevel)> {
+    ) -> Vec<(u64, Arc<TaskFn>, String, TimeWheelLevel)> {
         let current_tick = match level {
             TimeWheelLevel::Minute => self.current_date.minute() as usize,
             TimeWheelLevel::Hour => self.current_date.hour() as usize,
@@ -366,7 +355,7 @@ impl TimeWheel {
     }
 
     // 新增删除任务方法
-    fn remove_task(&mut self, task_id: TaskId) -> Result<(), String> {
+    fn remove_task(&mut self, task_id: u64) -> Result<(), String> {
         // 使用索引快速定位任务
         if let Some((level, bucket_index)) = self.task_index.remove(&task_id) {
             if let Some(buckets) = self.levels.get_mut(&level) {
@@ -380,18 +369,16 @@ impl TimeWheel {
     }
 }
 
-static CRON: OnceCell<CronManager> = OnceCell::new();
 // 实现Cron任务管理器
 impl CronManager {
-    pub fn new() {
+    pub fn new() -> Self {
         let time_wheel = Arc::new(Mutex::new(TimeWheel::new()));
 
         let manager = CronManager { time_wheel };
 
         // 启动时间轮调度器
         manager.start_scheduler();
-        CRON.set(manager)
-            .unwrap_or_else(|_| panic!("CronManager 已经初始化"));
+        manager
     }
 
     // 添加任务
@@ -399,7 +386,7 @@ impl CronManager {
         &mut self,
         cron_expr: &str,
         task: impl Fn() + Send + Sync + 'static,
-    ) -> Result<TaskId, String> {
+    ) -> Result<u64, String> {
         let task_fn = Arc::new(task);
         let cron_expr = cron_expr.to_string();
 
@@ -412,7 +399,7 @@ impl CronManager {
     }
 
     // 删除任务
-    pub fn remove(&mut self, task_id: TaskId) -> Result<(), String> {
+    pub fn remove(&mut self, task_id: u64) -> Result<(), String> {
         let mut time_wheel = self
             .time_wheel
             .lock()

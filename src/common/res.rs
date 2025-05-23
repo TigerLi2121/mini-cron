@@ -1,6 +1,6 @@
 use axum::{
-    response::{IntoResponse, Response},
     Json,
+    response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -9,12 +9,12 @@ use std::fmt::Debug;
 pub struct RP<T: Serialize> {
     pub code: i32,
     pub msg: String,
-    pub count: i32,
+    pub count: u64,
     pub data: T,
 }
 
 impl<T: Serialize> RP<T> {
-    pub fn new(code: i32, msg: String, count: i32, data: T) -> Self {
+    pub fn new(code: i32, msg: String, count: u64, data: T) -> Self {
         Self {
             code,
             msg,
@@ -22,7 +22,7 @@ impl<T: Serialize> RP<T> {
             data,
         }
     }
-    pub fn ok(count: i32, data: T) -> Self {
+    pub fn ok(count: u64, data: T) -> Self {
         Self::new(0, "ok".to_string(), count, data)
     }
 }
@@ -43,8 +43,7 @@ pub struct R<T: Serialize> {
     pub data: Option<T>,
 }
 
-impl<T: Serialize> R<T>
-{
+impl<T: Serialize> R<T> {
     pub fn new(code: i32, msg: String, data: Option<T>) -> Self {
         Self { code, msg, data }
     }
@@ -65,8 +64,7 @@ impl<T: Serialize> R<T>
     }
 }
 
-impl<T: Serialize> IntoResponse for R<T>
-{
+impl<T: Serialize> IntoResponse for R<T> {
     fn into_response(self) -> Response {
         Json(self).into_response()
     }

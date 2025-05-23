@@ -748,7 +748,6 @@ dependencies = [
  "axum",
  "chrono",
  "cron",
- "once_cell",
  "reqwest",
  "serde",
  "serde_json",
